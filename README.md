@@ -44,9 +44,14 @@ This simulator demonstrates:
 
 ### Traditional Settlement (T+2)
 
-```
-Trade Executed (T) → Broker Confirm (T+0) → CCP Clear (T+1) → CSD Settle (T+2)
-     0s                +24s                   +48s                +72s
+```mermaid
+flowchart LR
+    A([Trade Executed<br/>T+0]) --> B([Broker Confirm<br/>+24s])
+    B --> C([CCP Clear<br/>+48s])
+    C --> D([CSD Settle<br/>+72s])
+    
+    style A fill:#ffaa00,color:#000
+    style D fill:#ffaa00,color:#000
 ```
 
 **Issues:**
@@ -57,9 +62,13 @@ Trade Executed (T) → Broker Confirm (T+0) → CCP Clear (T+1) → CSD Settle (
 
 ### The Blockchain Alternative
 
-```
-Trade Executed → Smart Contract Execution → Atomic Settlement
-     0s                    <2s                        ~1s
+```mermaid
+flowchart LR
+    A([Trade Executed]) --> B([Smart Contract<br/>Execution])
+    B --> C([Atomic<br/>Settlement])
+    
+    style A fill:#00ff88,color:#000
+    style C fill:#00ff88,color:#000
 ```
 
 **Benefits:**
@@ -114,38 +123,47 @@ This project implements a **side-by-side comparison**:
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (React)                               │
-│                        http://localhost:3000                               │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
-│  │   Trade Cards   │  │   Flow Panel    │  │      Trade Table           │  │
-│  │ (T+2 vs Blockchain)│ │ (React Flow)   │  │    (History)              │  │
-│  └────────┬────────┘  └────────┬────────┘  └──────────────┬────────────┘  │
-│           │                     │                          │               │
-│           └─────────────────────┼──────────────────────────┘               │
-│                               ▼                                             │
-│                    WebSocket (ws://localhost:8000/ws)                      │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-           ┌───────────────────────────┼───────────────────────────┐
-           ▼                           ▼                           ▼
-┌─────────────────────────┐  ┌─────────────────────────────────────────────┐
-│   BLOCKCHAIN PATH        │  │         TRADITIONAL PATH (T+2)              │
-│   (Real-Time)           │  │                                               │
-│                         │  │  ┌──────────┐    ┌──────────┐    ┌─────────┐ │
-│  Settlement Service     │  │  │  Broker │───►│   CCP    │───►│   CSD   │ │
-│  Port: 8000             │  │  │ :8001   │ 24s│  :8002   │ 24s│  :8003  │ │
-│  Settlement: <2s        │  │  └──────────┘    └──────────┘    └─────────┘ │
-│  Atomic DvP             │  │                                               │
-└─────────────────────────┘  └─────────────────────────────────────────────┘
-           │                                    │
-           └──────────────────┬────────────────┘
-                              ▼
-                    ┌─────────────────────┐
-                    │   SQLite Database    │
-                    │   (settlement.db)    │
-                    └─────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Frontend["<b>FRONTEND</b><br/>React<br/>http://localhost:5173"]
+        TC[Trade Cards]
+        FP[Flow Panel<br/>React Flow]
+        TT[Trade Table]
+    end
+
+    WS[WebSocket<br/>ws://localhost:8000/ws]
+
+    subgraph Blockchain["<b>BLOCKCHAIN PATH</b><br/>Real-Time"]
+        BC[Settlement Service<br/>Port 8000<br/><2s Settlement]
+    end
+
+    subgraph Traditional["<b>TRADITIONAL PATH (T+2)</b>"]
+        BR[Broker<br/>Port 8001<br/>+24s]
+        CP[CCP<br/>Port 8002<br/>+24s]
+        CS[CSD<br/>Port 8003<br/>+24s]
+    end
+
+    DB[(SQLite<br/>settlement.db)]
+
+    TC --> WS
+    FP --> WS
+    TT --> WS
+    WS --> BC
+    WS --> BR
+    BR --> CP
+    CP --> CS
+    BC --> DB
+    BR -.-> DB
+    CP -.-> DB
+    CS -.-> DB
+
+    style TC fill:#1a1a2e,stroke:#ffaa00
+    style FP fill:#1a1a2e,stroke:#00ff88
+    style TT fill:#1a1a2e,stroke:#4488ff
+    style BC fill:#0a2a1a,stroke:#00ff88
+    style BR fill:#2a1a0a,stroke:#ffaa00
+    style CP fill:#2a1a0a,stroke:#ffaa00
+    style CS fill:#2a1a0a,stroke:#ffaa00
 ```
 
 ### Component Communication
@@ -367,16 +385,28 @@ The Trade Flow panel is an **interactive React Flow canvas** that visualizes tra
 
 ### Layout Diagram
 
-```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│Initiated │───►│  Broker  │───►│   CCP    │───►│   CSD    │───►│ Settled │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘
-      │                                                     
-      │                                                     
-      ▼                                                     
-┌──────────┐    ┌──────────┐                                 
-│Blockchain│───►│ Settled  │                                 
-└──────────┘    └──────────┘                                 
+```mermaid
+flowchart LR
+    subgraph Traditional["Traditional T+2"]
+        I1([Initiated]) --> B([Broker])
+        B --> C([CCP])
+        C --> D([CSD])
+        D --> S1([Settled])
+    end
+
+    subgraph Blockchain["Blockchain"]
+        I2([Initiated]) --> BC([Blockchain])
+        BC --> S2([Settled])
+    end
+
+    style I1 fill:#ffaa00,color:#000,stroke:#ffaa00
+    style B fill:#ffaa00,color:#000,stroke:#ffaa00
+    style C fill:#ffaa00,color:#000,stroke:#ffaa00
+    style D fill:#ffaa00,color:#000,stroke:#ffaa00
+    style S1 fill:#00ff88,color:#000,stroke:#00ff88
+    style I2 fill:#00ff88,color:#000,stroke:#00ff88
+    style BC fill:#00ff88,color:#000,stroke:#00ff88
+    style S2 fill:#00ff88,color:#000,stroke:#00ff88
 ```
 
 ### How It Works
