@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: settlement-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: settlement
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  settlement:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: settlement-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=settlement
+      - PORT=8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  broker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: broker-service
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=settlement
+      - PORT=8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ccp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ccp-service
+    ports:
+      - "8002:8002"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=settlement
+      - PORT=8002
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  csd:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: csd-service
+    ports:
+      - "8003:8003"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=settlement
+      - PORT=8003
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

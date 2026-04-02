@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  settlement:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: settlement-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run ./cmd/settlement
+
+  broker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: broker-service
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run ./cmd/broker
+
+  ccp:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ccp-service
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run ./cmd/ccp
+
+  csd:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: csd-service
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run ./cmd/csd
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev
